@@ -25,30 +25,13 @@ $params = [
 ];
 
 $sign = MD5SignUtil::getSign($params, $appSecret);
+$stringA = MD5SignUtil::buildStringA($params);
+$stringSignTemp = MD5SignUtil::buildStringSignTemp($params, $appSecret);
 
-echo "sign = {$sign}" . PHP_EOL;
+echo "stringA         = {$stringA}" . PHP_EOL;
+echo "stringSignTemp  = {$stringSignTemp}" . PHP_EOL;
+echo "sign            = {$sign}" . PHP_EOL;
 
-// 手工复核：过滤 → 排序 → 拼接 → 追加 &key=secret → MD5 大写
-$manual = [
-    'appId' => '474jNjIGdD7o',
-    'authType' => '1',
-    'cardType' => '1',
-    'idCard' => '111111111',
-    'name' => '张三',
-    'nonce' => '12345678',
-    'returnUrl' => 'http://testyqt.esa2000.com:8080/UUMS/sys/reg/authSuccess',
-    'timestamp' => '1710000000000',
-    'version' => '1.0',
-];
-ksort($manual, SORT_STRING);
-$pairs = [];
-foreach ($manual as $k => $v) {
-    $pairs[] = "{$k}={$v}";
-}
-$stringA = implode('&', $pairs);
-$stringSignTemp = $stringA . '&key=' . $appSecret;
-$expect = strtoupper(md5($stringSignTemp));
-
-echo "stringA = {$stringA}" . PHP_EOL;
-echo "expect  = {$expect}" . PHP_EOL;
+$expect = strtoupper(md5($stringA . '&key=' . $appSecret));
+echo "expect          = {$expect}" . PHP_EOL;
 echo ($sign === $expect ? "OK: sign matched" : "FAIL: sign mismatch") . PHP_EOL;

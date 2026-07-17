@@ -8,7 +8,9 @@
 2. **拼接**：`key1=value1&key2=value2...` 得到待签名字符串 `stringA`  
 3. **MD5 签名**：对 `stringA + "&key=" + appSecret` 做 MD5，结果转大写
 
-> 若对接方文档要求秘钥拼接方式不同（例如直接追加 `appSecret`，或 `&appSecret=`），只需改 `MD5SignUtil::getSign` 中拼接那一行。
+> 步骤 1–2 与你提供的规则一致；步骤 3 补上了 `getSign(body, appSecret)` 中秘钥的常见用法（`&key=` + appSecret）。  
+> 若厂商文档不同，可切换模式：`MD5SignUtil::getSign($params, $secret, MD5SignUtil::APPEND_RAW)` 等。  
+> 调试时可打印 `MD5SignUtil::buildStringSignTemp(...)`，与 Java 侧待签名串逐字对比。
 
 ## 文件
 

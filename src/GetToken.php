@@ -59,12 +59,30 @@ class GetToken
     }
 
     /**
-     * POST JSON
+     * POST JSON（优先 curl，否则用 file_get_contents）
      */
     private function postJson(string $url, array $body): array
     {
         $payload = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
+        if (function_exists('curl_init')) {
+            [$httpCode, $responseBody] = $this->postWithCurl($url, $payload);
+        } else {
+            [$httpCode, $responseBody] = $this->postWithStream($url, $payload);
+        }
+
+        $decoded = json_decode($responseBody, true);
+
+        return [
+            'http_code' => $httpCode,
+            'body' => $responseBody,
+            'data' => is_array($decoded) ? $decoded : null,
+            'request' => $body,
+        ];
+    }
+
+    private function postWithCurl(string $url, string $payload): array
+    {
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_POST => true,
@@ -87,14 +105,35 @@ class GetToken
             throw new RuntimeException('请求失败: ' . $error);
         }
 
-        $decoded = json_decode($responseBody, true);
+        return [$httpCode, $responseBody];
+    }
 
-        return [
-            'http_code' => $httpCode,
-            'body' => $responseBody,
-            'data' => is_array($decoded) ? $decoded : null,
-            'request' => $body,
-        ];
+    private function postWithStream(string $url, string $payload): array
+    {
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => "Content-Type: application/json; charset=utf-8\r\n"
+                    . 'Content-Length: ' . strlen($payload) . "\r\n",
+                'content' => $payload,
+                'timeout' => $this->timeout,
+                'ignore_errors' => true,
+            ],
+        ]);
+
+        $responseBody = @file_get_contents($url, false, $context);
+        if ($responseBody === false) {
+            throw new RuntimeException('请求失败: 无法访问 ' . $url);
+        }
+
+        $httpCode = 0;
+        if (isset($http_response_header[0])
+            && preg_match('/\s(\d{3})\s/', $http_response_header[0], $m)
+        ) {
+            $httpCode = (int) $m[1];
+        }
+
+        return [$httpCode, $responseBody];
     }
 }
 
